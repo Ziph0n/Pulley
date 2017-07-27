@@ -120,26 +120,26 @@ open class PulleyViewController: UIViewController {
         willSet {
             
             guard let controller = primaryContentViewController else {
-                return
+                return;
             }
-
-            controller.willMove(toParentViewController: nil)
+            
             controller.view.removeFromSuperview()
+            controller.willMove(toParentViewController: nil)
             controller.removeFromParentViewController()
         }
         
         didSet {
             
             guard let controller = primaryContentViewController else {
-                return
+                return;
             }
-
-            addChildViewController(controller)
+            
             controller.view.translatesAutoresizingMaskIntoConstraints = true
-            controller.view.frame = primaryContentContainer.frame
-            primaryContentContainer.addSubview(controller.view)
+            
+            self.primaryContentContainer.addSubview(controller.view)
+            self.addChildViewController(controller)
             controller.didMove(toParentViewController: self)
-
+            
             if self.isViewLoaded
             {
                 self.view.setNeedsLayout()
@@ -151,28 +151,28 @@ open class PulleyViewController: UIViewController {
     /// The current drawer view controller (shown in the drawer).
     public fileprivate(set) var drawerContentViewController: UIViewController! {
         willSet {
-
+            
             guard let controller = drawerContentViewController else {
-                return
+                return;
             }
-
-            controller.willMove(toParentViewController: nil)
+            
             controller.view.removeFromSuperview()
+            controller.willMove(toParentViewController: nil)
             controller.removeFromParentViewController()
         }
-
+        
         didSet {
-
+            
             guard let controller = drawerContentViewController else {
-                return
+                return;
             }
-
-            addChildViewController(controller)
+            
             controller.view.translatesAutoresizingMaskIntoConstraints = true
-            controller.view.frame = drawerContentContainer.frame
-            drawerContentContainer.addSubview(controller.view)
+            
+            self.drawerContentContainer.addSubview(controller.view)
+            self.addChildViewController(controller)
             controller.didMove(toParentViewController: self)
-
+            
             if self.isViewLoaded
             {
                 self.view.setNeedsLayout()
@@ -188,15 +188,6 @@ open class PulleyViewController: UIViewController {
     public fileprivate(set) var drawerPosition: PulleyPosition = .collapsed {
         didSet {
             setNeedsStatusBarAppearanceUpdate()
-        }
-    }
-
-    // The visible height of the drawer. Useful for adjusting the display of content in the main content view.
-    public var visibleDrawerHeight: CGFloat {
-        if drawerPosition == .closed {
-            return 0.0
-        } else {
-            return drawerScrollView.bounds.height
         }
     }
     
@@ -287,13 +278,6 @@ open class PulleyViewController: UIViewController {
             initialDrawerPosition = PulleyPosition.positionFor(string: initialDrawerPositionFromIB)
         }
     }
-
-    /// Whether the drawer's position can be changed by the user. If set to `false`, the only way to move the drawer is programmatically. Defaults to `true`.
-    public var allowsUserDrawerPositionChange: Bool = true {
-        didSet {
-            enforceCanScrollDrawer()
-        }
-    }
     
     /// The drawer positions supported by the drawer
     fileprivate var supportedDrawerPositions: [PulleyPosition] = PulleyPosition.all {
@@ -323,7 +307,7 @@ open class PulleyViewController: UIViewController {
                 setDrawerPosition(position: lowestDrawerState, animated: false)
             }
             
-            enforceCanScrollDrawer()
+            drawerScrollView.isScrollEnabled = supportedDrawerPositions.count > 1
         }
     }
     
@@ -448,9 +432,9 @@ open class PulleyViewController: UIViewController {
             
             assert(primaryContentViewController != nil && drawerContentViewController != nil, "Container views must contain an embedded view controller.")
         }
-
-        enforceCanScrollDrawer()
+        
         setDrawerPosition(position: initialDrawerPosition, animated: false)
+        
         scrollViewDidScroll(drawerScrollView)
     }
     
@@ -519,15 +503,6 @@ open class PulleyViewController: UIViewController {
     override open func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
-    }
-
-    // MARK: Private State Updates
-
-    private func enforceCanScrollDrawer() {
-        guard isViewLoaded else {
-            return
-        }
-        drawerScrollView.isScrollEnabled = allowsUserDrawerPositionChange && supportedDrawerPositions.count > 1
     }
     
     // MARK: Configuration Updates
@@ -715,7 +690,7 @@ open class PulleyViewController: UIViewController {
     
     // MARK: Actions
     
-    func dimmingViewTapRecognizerAction(gestureRecognizer: UITapGestureRecognizer)
+    @objc func dimmingViewTapRecognizerAction(gestureRecognizer: UITapGestureRecognizer)
     {
         if gestureRecognizer == dimmingViewTapRecognizer
         {
@@ -882,7 +857,7 @@ extension PulleyViewController: UIScrollViewDelegate {
                 // Calculate percentage between partial and full reveal
                 let fullRevealHeight = (self.view.bounds.size.height - topInset)
                 
-                let progress = (scrollView.contentOffset.y - (partialRevealHeight - lowestStop)) / (fullRevealHeight - (partialRevealHeight))
+                let progress = (scrollView.contentOffset.y - (collapsedHeight - lowestStop)) / (fullRevealHeight - (collapsedHeight))
                 
                 delegate?.makeUIAdjustmentsForFullscreen?(progress: progress)
                 (drawerContentViewController as? PulleyDrawerViewControllerDelegate)?.makeUIAdjustmentsForFullscreen?(progress: progress)
@@ -894,16 +869,21 @@ extension PulleyViewController: UIScrollViewDelegate {
             }
             else
             {
-                if backgroundDimmingView.alpha >= 0.001
-                {
-                    backgroundDimmingView.alpha = 0.0
-                    
-                    delegate?.makeUIAdjustmentsForFullscreen?(progress: 0.0)
-                    (drawerContentViewController as? PulleyDrawerViewControllerDelegate)?.makeUIAdjustmentsForFullscreen?(progress: 0.0)
-                    (primaryContentViewController as? PulleyPrimaryContentControllerDelegate)?.makeUIAdjustmentsForFullscreen?(progress: 0.0)
-                    
-                    backgroundDimmingView.isUserInteractionEnabled = false
-                }
+                //if backgroundDimmingView.alpha >= 0.001
+                //{
+                //backgroundDimmingView.alpha = 0.0
+                
+                // Calculate percentage between partial and full reveal
+                let fullRevealHeight = (self.view.bounds.size.height - topInset)
+                
+                let progress = (scrollView.contentOffset.y - (collapsedHeight - lowestStop)) / (fullRevealHeight - (collapsedHeight))
+                
+                delegate?.makeUIAdjustmentsForFullscreen?(progress: progress)
+                (drawerContentViewController as? PulleyDrawerViewControllerDelegate)?.makeUIAdjustmentsForFullscreen?(progress: progress)
+                (primaryContentViewController as? PulleyPrimaryContentControllerDelegate)?.makeUIAdjustmentsForFullscreen?(progress: progress)
+                
+                backgroundDimmingView.isUserInteractionEnabled = false
+                //}
             }
             
             delegate?.drawerChangedDistanceFromBottom?(drawer: self, distance: scrollView.contentOffset.y + lowestStop)
@@ -912,3 +892,4 @@ extension PulleyViewController: UIScrollViewDelegate {
         }
     }
 }
+
